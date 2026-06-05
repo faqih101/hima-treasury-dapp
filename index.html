@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HIMA Informatika UHAMKA - Treasury</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <style>
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.08);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --accent: #00ffcc;
+            --accent-hover: #00ccaa;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0b132b, #1c2541, #3a506b);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header { text-align: center; margin-bottom: 30px; }
+        h1 { color: var(--accent); letter-spacing: 1px; margin-bottom: 5px; }
+        .subtitle { font-size: 14px; color: #a1b0c9; margin-bottom: 20px; }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .full-width { grid-column: span 2; text-align: center; }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0 15px 0;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: white;
+            box-sizing: border-box;
+            transition: 0.3s;
+        }
+        
+        input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 8px rgba(0, 255, 204, 0.3); }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: var(--accent);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            text-transform: uppercase;
+        }
+
+        button:hover { background: var(--accent-hover); transform: translateY(-2px); }
+        .btn-connect { background: #fff; color: #000; width: auto; padding: 10px 30px; border-radius: 20px; }
+        .btn-action { background: #ff9800; color: #fff; }
+        .btn-action:hover { background: #e68a00; }
+
+        .status { font-size: 13px; color: #00ffcc; margin-top: 15px; word-break: break-all; }
+        .saldo { font-size: 40px; font-weight: bold; color: var(--accent); margin: 10px 0; text-shadow: 0 0 10px rgba(0, 255, 204, 0.4); }
+        h3 { margin-top: 0; border-bottom: 1px solid var(--glass-border); padding-bottom: 10px; font-size: 18px; }
+        
+        .footer { margin-top: 40px; font-size: 12px; color: #5bc0be; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🏛️ Brankas Kas HIMA Informatika</h1>
+        <div class="subtitle">Decentralized Multi-Sig Treasury System on Sepolia Testnet</div>
+        <button id="connectBtn" class="btn-connect" onclick="connectWallet()">🦊 Connect Wallet MetaMask</button>
+        <div id="walletAddress" class="status" style="display: none;"></div>
+    </div>
+
+    <div id="mainApp" class="container" style="display: none;">
+        
+        <!-- Panel Saldo -->
+        <div class="glass-panel full-width">
+            <h3>Total Kas HIMA Terkumpul</h3>
+            <div class="saldo" id="saldoDisplay">0.00 ETH</div>
+        </div>
+
+        <!-- Panel Mahasiswa -->
+        <div class="glass-panel">
+            <h3>👨‍🎓 Panel Mahasiswa</h3>
+            <p style="font-size: 13px; color: #bbb;">Bayar uang kas bulanan dengan aman. Dana langsung masuk ke Smart Contract tanpa perantara.</p>
+            <label>Nominal Pembayaran (ETH)</label>
+            <input type="number" id="nominalKas" step="0.001" placeholder="Contoh: 0.005">
+            <button onclick="bayarKas()">Kirim Uang Kas</button>
+        </div>
+
+        <!-- Panel Pengurus: Ajukan -->
+        <div class="glass-panel">
+            <h3>📝 Panel Pengurus: Buat Proposal</h3>
+            <p style="font-size: 13px; color: #bbb;">Ajukan penarikan dana untuk kegiatan kampus.</p>
+            <label>Alamat Wallet Tujuan (Vendor/Panitia)</label>
+            <input type="text" id="tujuanDana" placeholder="0x...">
+            <label>Jumlah Penarikan (ETH)</label>
+            <input type="number" id="jumlahDana" step="0.001" placeholder="Contoh: 0.01">
+            <label>Deskripsi Keperluan</label>
+            <input type="text" id="deskripsiDana" placeholder="Contoh: DP Stand Pameran Teknoka 10">
+            <button class="btn-action" onclick="ajukanProposal()">Buat Proposal</button>
+        </div>
+
+        <!-- Panel Pengurus: Eksekusi -->
+        <div class="glass-panel full-width">
+            <h3>⚖️ Panel Eksekusi & Approval Multi-Sig</h3>
+            <p style="font-size: 13px; color: #bbb;">Butuh minimal 2 persetujuan dari Pengurus agar dana bisa dicairkan. Masukkan ID Proposal (Dimulai dari angka 0).</p>
+            <div style="display: flex; gap: 15px; align-items: flex-end;">
+                <div style="flex: 1;">
+                    <input type="number" id="proposalId" placeholder="ID Proposal (Misal: 0)" style="margin-bottom: 0;">
+                </div>
+                <button onclick="approveProposal()" style="background: #4caf50; color: white; flex: 1;">👍 Approve Proposal</button>
+                <button onclick="cairkanProposal()" style="background: #f44336; color: white; flex: 1;">💰 Cairkan Dana</button>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        System Engineered by Adnan Faqih Yudha Mulia (NIM: 2303015044) | Web3 Bootcamp Project
+    </div>
+
+    <script>
+        let provider, signer, contract;
+        
+        // === PASTE CONTRACT ADDRESS LUU DI SINI ===
+        const contractAddress = "0x52f79dC1b2c7563E0b2cd477fE68346933830156"; 
+        
+        const contractABI = [
+            "function bayarKas() public payable",
+            "function ajukanPenarikan(address payable _tujuan, uint _jumlah, string memory _deskripsi) public",
+            "function setujuiProposal(uint _proposalId) public",
+            "function cairkanDana(uint _proposalId) public",
+            "function getSaldoKas() public view returns (uint)"
+        ];
+
+        async function connectWallet() {
+            if (window.ethereum) {
+                try {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    signer = provider.getSigner();
+                    const address = await signer.getAddress();
+                    
+                    document.getElementById('connectBtn').style.display = 'none';
+                    document.getElementById('walletAddress').style.display = 'block';
+                    document.getElementById('walletAddress').innerText = "Connected: " + address;
+                    document.getElementById('mainApp').style.display = 'grid';
+
+                    contract = new ethers.Contract(contractAddress, contractABI, signer);
+                    updateSaldo();
+
+                    window.ethereum.on('accountsChanged', function () {
+                        window.location.reload();
+                    });
+                } catch (error) {
+                    console.error("Gagal konek:", error);
+                }
+            } else {
+                alert("Mohon install ekstensi MetaMask terlebih dahulu!");
+            }
+        }
+
+        async function updateSaldo() {
+            try {
+                const balance = await contract.getSaldoKas();
+                document.getElementById('saldoDisplay').innerText = ethers.utils.formatEther(balance) + " ETH";
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        async function bayarKas() {
+            const amount = document.getElementById('nominalKas').value;
+            if(!amount || amount <= 0) return alert("Masukkan nominal kas yang valid!");
+            try {
+                const tx = await contract.bayarKas({ value: ethers.utils.parseEther(amount) });
+                alert("Transaksi dikirim ke MetaMask. Menunggu konfirmasi...");
+                await tx.wait();
+                alert("Sukses! Pembayaran kas berhasil dicatat di Blockchain.");
+                updateSaldo();
+            } catch (err) { alert("Transaksi dibatalkan atau gagal: " + err.message); }
+        }
+
+        async function ajukanProposal() {
+            const tujuan = document.getElementById('tujuanDana').value;
+            const jumlah = document.getElementById('jumlahDana').value;
+            const deskripsi = document.getElementById('deskripsiDana').value;
+            if(!tujuan || !jumlah || !deskripsi) return alert("Lengkapi semua form proposal!");
+            try {
+                const tx = await contract.ajukanPenarikan(tujuan, ethers.utils.parseEther(jumlah), deskripsi);
+                alert("Mengirim proposal ke jaringan...");
+                await tx.wait();
+                alert("Proposal berhasil dibuat! Ingat, ID Proposal pertama adalah 0.");
+            } catch (err) { alert("Gagal: Pastikan Anda login dengan dompet Pengurus. " + err.message); }
+        }
+
+        async function approveProposal() {
+            const id = document.getElementById('proposalId').value;
+            if(!id) return alert("Masukkan ID Proposal yang ingin di-approve!");
+            try {
+                const tx = await contract.setujuiProposal(id);
+                alert("Memberikan persetujuan...");
+                await tx.wait();
+                alert("Approval sukses diberikan!");
+            } catch (err) { alert("Gagal: Anda mungkin sudah approve atau bukan pengurus. " + err.message); }
+        }
+
+        async function cairkanProposal() {
+            const id = document.getElementById('proposalId').value;
+            if(!id) return alert("Masukkan ID Proposal yang ingin dicairkan!");
+            try {
+                const tx = await contract.cairkanDana(id);
+                alert("Mencairkan dana dari Brankas...");
+                await tx.wait();
+                alert("Uang Kas berhasil dicairkan ke tujuan!");
+                updateSaldo();
+            } catch (err) { alert("Pencairan Gagal: Syarat minimal approval (2 orang) belum terpenuhi atau saldo tidak cukup. " + err.message); }
+        }
+    </script>
+</body>
+</html>
