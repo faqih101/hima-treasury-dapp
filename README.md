@@ -75,5 +75,6 @@ Jika Anda ingin menguji sistem ini di komputer lokal:
 
 👨‍💻 Pengembang
 Proyek ini dikembangkan sebagai bagian dari portofolio Bootcamp Web3 dan solusi inovasi teknologi kampus.
-Adnan Faqih Yudha Mulia * Mahasiswa Informatika, dan Kawan-kawan yang tidak bisa disebutkan satu per satu
+Adnan Faqih Yudha Mulia * Mahasiswa Informatika, dan Kawan-kawan satu kelompok 8 yang tidak bisa disebutkan satu per satu
+
 Universitas Muhammadiyah Prof. Dr. HAMKA (UHAMKA)
